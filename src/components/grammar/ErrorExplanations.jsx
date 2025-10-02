@@ -1,18 +1,21 @@
-import React from 'react';
-import { Card, ListGroup, Badge, Accordion } from 'react-bootstrap';
-import { FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
-import { formatDate, groupBy } from '../../utils/helpers';
+import React from "react";
+import { Card, ListGroup, Badge, Accordion, Alert } from "react-bootstrap";
+import { FaCalendarAlt, FaExclamationTriangle, FaRobot } from "react-icons/fa";
+import { formatDate, groupBy } from "../../utils/helpers";
+import { useApp } from "../../contexts/AppContext";
 
 const ErrorExplanations = ({ errorLog }) => {
+  const { aiAnalyses } = useApp();
+
   // Group errors by date
   const errorsByDate = groupBy(
-    errorLog.filter(e => e.type === 'grammar'),
-    (error) => formatDate(error.date, 'yyyy-MM-dd')
+    errorLog.filter((e) => e.type === "grammar"),
+    (error) => formatDate(error.date, "yyyy-MM-dd")
   );
 
   const dates = Object.keys(errorsByDate).sort().reverse();
 
-  if (dates.length === 0) {
+  if (dates.length === 0 && aiAnalyses.length === 0) {
     return (
       <Card className="card-custom">
         <Card.Body className="text-center py-5">
@@ -25,64 +28,111 @@ const ErrorExplanations = ({ errorLog }) => {
   }
 
   return (
-    <Card className="card-custom">
-      <Card.Header className="bg-danger bg-opacity-10">
-        <h5 className="mb-0">
-          <FaExclamationTriangle className="me-2 text-danger" />
-          Lịch sử lỗi sai và giải thích
-        </h5>
-      </Card.Header>
-      <Card.Body>
-        <Accordion defaultActiveKey="0">
-          {dates.map((date, index) => {
-            const errors = errorsByDate[date];
-            return (
-              <Accordion.Item eventKey={index.toString()} key={date}>
-                <Accordion.Header>
-                  <div className="d-flex justify-content-between w-100 pe-3">
-                    <span>
-                      <FaCalendarAlt className="me-2" />
-                      {formatDate(date, 'dd/MM/yyyy')}
-                    </span>
-                    <Badge bg="danger">{errors.length} lỗi</Badge>
-                  </div>
-                </Accordion.Header>
-                <Accordion.Body>
-                  <ListGroup variant="flush">
-                    {errors.map((error, idx) => (
-                      <ListGroup.Item key={error.id || idx}>
-                        <div className="mb-2">
-                          <strong className="text-primary">Câu hỏi:</strong>
-                          <p className="mb-1">{error.question}</p>
-                        </div>
-                        
-                        <div className="mb-2">
-                          <Badge bg="danger" className="me-2">
-                            Bạn đã chọn: {error.userAnswer}
-                          </Badge>
-                          <Badge bg="success">
-                            Đáp án đúng: {error.correctAnswer}
-                          </Badge>
-                        </div>
+    <div>
+      {/* AI Analyses Section */}
+      {aiAnalyses.length > 0 && (
+        <Card className="card-custom mb-4">
+          <Card.Header className="bg-info bg-opacity-10">
+            <h5 className="mb-0">
+              <FaRobot className="me-2" /> Phân tích AI tự động
+            </h5>
+          </Card.Header>
+          <Card.Body>
+            <Accordion>
+              {aiAnalyses
+                .slice()
+                .reverse()
+                .map((analysis, idx) => (
+                  <Accordion.Item eventKey={idx.toString()} key={idx}>
+                    <Accordion.Header>
+                      <div className="d-flex justify-content-between w-100 pe-3">
+                        <span>
+                          <FaCalendarAlt className="me-2" />
+                          {formatDate(analysis.date, "dd/MM/yyyy HH:mm")}
+                        </span>
+                        <Badge bg="info">
+                          {analysis.analyses.length} phân tích
+                        </Badge>
+                      </div>
+                    </Accordion.Header>
+                    <Accordion.Body>
+                      <ListGroup variant="flush">
+                        {analysis.analyses.map((item, i) => (
+                          <ListGroup.Item key={i}>
+                            <div className="mb-2">
+                              <strong className="text-primary">
+                                💡 Giải thích:
+                              </strong>
+                              <p className="mb-1">{item.explanation}</p>
+                            </div>
+                            {item.tip && (
+                              <Alert variant="success" className="mb-0">
+                                <strong>✨ Mẹo:</strong> {item.tip}
+                              </Alert>
+                            )}
+                          </ListGroup.Item>
+                        ))}
+                      </ListGroup>
+                    </Accordion.Body>
+                  </Accordion.Item>
+                ))}
+            </Accordion>
+          </Card.Body>
+        </Card>
+      )}
 
-                        <div className="alert alert-info mb-0">
-                          <strong>💡 Giải thích:</strong>
-                          <p className="mb-0 mt-1">{error.explanation}</p>
-                        </div>
-
-                        <small className="text-muted">
-                          {error.date && !isNaN(new Date(error.date)) ? formatDate(error.date) : "N/A"}
-                        </small>
-                      </ListGroup.Item>
-                    ))}
-                  </ListGroup>
-                </Accordion.Body>
-              </Accordion.Item>
-            );
-          })}
-        </Accordion>
-      </Card.Body>
-    </Card>
+      {/* Existing error log display */}
+      {dates.length > 0 && (
+        <Card className="card-custom">
+          <Card.Header>
+            <h5 className="mb-0">
+              <FaExclamationTriangle className="me-2" />
+              Lịch sử lỗi sai
+            </h5>
+          </Card.Header>
+          <Card.Body>
+            <Accordion defaultActiveKey="0">
+              {dates.map((date, idx) => (
+                <Accordion.Item eventKey={idx.toString()} key={date}>
+                  <Accordion.Header>
+                    <div className="d-flex justify-content-between w-100 pe-3">
+                      <span>
+                        <FaCalendarAlt className="me-2" />
+                        {formatDate(date, "dd/MM/yyyy")}
+                      </span>
+                      <Badge bg="danger">{errorsByDate[date].length} lỗi</Badge>
+                    </div>
+                  </Accordion.Header>
+                  <Accordion.Body>
+                    <ListGroup variant="flush">
+                      {errorsByDate[date].map((error) => (
+                        <ListGroup.Item key={error.id}>
+                          <p className="mb-1">
+                            <strong>Câu hỏi:</strong> {error.question}
+                          </p>
+                          <p className="mb-1">
+                            <strong>Bạn chọn:</strong>{" "}
+                            <span className="text-danger">
+                              {error.userAnswer}
+                            </span>
+                          </p>
+                          <p className="mb-1">
+                            <strong>Đáp án đúng:</strong>{" "}
+                            <span className="text-success">
+                              {error.correctAnswer}
+                            </span>
+                          </p>
+                        </ListGroup.Item>
+                      ))}
+                    </ListGroup>
+                  </Accordion.Body>
+                </Accordion.Item>
+              ))}
+            </Accordion>
+          </Card.Body>
+        </Card>
+      )}
+    </div>
   );
 };
 

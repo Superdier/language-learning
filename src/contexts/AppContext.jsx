@@ -1,5 +1,17 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+} from "react";
 import { STORAGE_KEYS } from "../utils/constants";
+import { useAuth } from "./AuthContext";
+import { syncToCloud } from "../services/cloudSyncService";
+import {
+  scheduleDailyAnalysis,
+  stopDailyAnalysis,
+} from "../services/dailyErrorAnalysis";
 
 const AppContext = createContext();
 
@@ -12,8 +24,8 @@ export const useApp = () => {
 };
 
 export const AppProvider = ({ children }) => {
-  // User state
-  const [user, setUser] = useState(null);
+  const { user, cloudData } = useAuth();
+  const syncTimeoutRef = useRef(null);
 
   // Grammar state
   const [grammarItems, setGrammarItems] = useState([]);
@@ -35,6 +47,58 @@ export const AppProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
 
+  // AI Analysis state
+  const [aiAnalyses, setAiAnalyses] = useState([]);
+
+  // Auto sync to cloud when data changes (debounced)
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    // Clear previous timeout
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    // Set new timeout to sync after 5 seconds of inactivity
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        await syncToCloud(user.uid, {
+          grammarCount: grammarItems.length,
+          vocabularyCount: vocabularyItems.length,
+          kanjiCount: kanjiItems.length,
+          reviewCount: reviewHistory.length,
+          lastModified: new Date().toISOString(),
+        });
+        console.log("Auto-synced to cloud");
+      } catch (error) {
+        console.error("Auto-sync failed:", error);
+      }
+    }, 5000);
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [user?.uid, grammarItems, vocabularyItems, kanjiItems, reviewHistory]);
+
+  // Load data from cloud when user logs in or cloudData changes
+  useEffect(() => {
+    if (cloudData) {
+      console.log("Loading data from cloud...", cloudData);
+      setGrammarItems(cloudData.grammarItems || []);
+      setVocabularyItems(cloudData.vocabularyItems || []);
+      setKanjiItems(cloudData.kanjiItems || []);
+      setContrastCards(cloudData.contrastCards || []);
+      setReviewHistory(cloudData.reviewHistory || []);
+      setErrorLog(cloudData.errorLog || []);
+      setSavedSentences(cloudData.savedSentences || []);
+      setSavedDiaries(cloudData.savedDiaries || []);
+    }
+    // If there's no cloud data, load from local storage as a fallback
+    else loadFromLocalStorage();
+  }, [cloudData]);
+
   // Load data from localStorage on mount
   useEffect(() => {
     loadFromLocalStorage();
@@ -48,13 +112,7 @@ export const AppProvider = ({ children }) => {
   // Save data to localStorage whenever it changes
   useEffect(() => {
     saveToLocalStorage();
-    localStorage.setItem(
-      "japanese_app_sentences",
-      JSON.stringify(savedSentences)
-    );
-    localStorage.setItem("japanese_app_diaries", JSON.stringify(savedDiaries));
   }, [
-    user,
     grammarItems,
     vocabularyItems,
     kanjiItems,
@@ -66,13 +124,11 @@ export const AppProvider = ({ children }) => {
 
   const loadFromLocalStorage = () => {
     try {
-      const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
       const grammarData = localStorage.getItem(STORAGE_KEYS.GRAMMAR_DATA);
       const vocabData = localStorage.getItem(STORAGE_KEYS.VOCABULARY_DATA);
       const historyData = localStorage.getItem(STORAGE_KEYS.REVIEW_HISTORY);
       const errorData = localStorage.getItem(STORAGE_KEYS.ERROR_LOG);
 
-      if (userData) setUser(JSON.parse(userData));
       if (grammarData) {
         const parsed = JSON.parse(grammarData);
         setGrammarItems(parsed.grammar || []);
@@ -85,16 +141,20 @@ export const AppProvider = ({ children }) => {
       }
       if (historyData) setReviewHistory(JSON.parse(historyData));
       if (errorData) setErrorLog(JSON.parse(errorData));
+
+      const sentencesData = localStorage.getItem("japanese_app_sentences");
+      const diariesData = localStorage.getItem("japanese_app_diaries");
+      if (sentencesData) setSavedSentences(JSON.parse(sentencesData));
+      if (diariesData) setSavedDiaries(JSON.parse(diariesData));
     } catch (error) {
       console.error("Error loading from localStorage:", error);
     }
   };
 
   const saveToLocalStorage = () => {
+    // Don't save to local storage if there is no user, to avoid conflicts on login
+    if (!user) return;
     try {
-      if (user) {
-        localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
-      }
       localStorage.setItem(
         STORAGE_KEYS.GRAMMAR_DATA,
         JSON.stringify({
@@ -114,6 +174,14 @@ export const AppProvider = ({ children }) => {
         JSON.stringify(reviewHistory)
       );
       localStorage.setItem(STORAGE_KEYS.ERROR_LOG, JSON.stringify(errorLog));
+      localStorage.setItem(
+        "japanese_app_sentences",
+        JSON.stringify(savedSentences)
+      );
+      localStorage.setItem(
+        "japanese_app_diaries",
+        JSON.stringify(savedDiaries)
+      );
     } catch (error) {
       console.error("Error saving to localStorage:", error);
     }
@@ -161,6 +229,43 @@ export const AppProvider = ({ children }) => {
     showNotification("Đã xóa tất cả dữ liệu", "success");
   };
 
+  // Schedule daily error analysis
+  useEffect(() => {
+    const handleAnalysisComplete = (analyses, errors) => {
+      setAiAnalyses((prev) => [
+        ...prev,
+        {
+          date: new Date().toISOString(),
+          analyses,
+          errors,
+        },
+      ]);
+      showNotification("AI đã phân tích lỗi hôm nay!", "info");
+    };
+
+    scheduleDailyAnalysis(errorLog, handleAnalysisComplete);
+
+    return () => {
+      stopDailyAnalysis();
+    };
+  }, [errorLog]);
+
+  // Load AI analyses from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("japanese_app_ai_analyses");
+    if (saved) {
+      setAiAnalyses(JSON.parse(saved));
+    }
+  }, []);
+
+  // Save AI analyses to localStorage
+  useEffect(() => {
+    localStorage.setItem(
+      "japanese_app_ai_analyses",
+      JSON.stringify(aiAnalyses)
+    );
+  }, [aiAnalyses]);
+
   const value = {
     // State
     user,
@@ -174,7 +279,6 @@ export const AppProvider = ({ children }) => {
     notification,
 
     // Setters
-    setUser,
     setGrammarItems,
     setContrastCards,
     setVocabularyItems,
@@ -192,6 +296,10 @@ export const AppProvider = ({ children }) => {
     clearAllData,
     savedSentences,
     savedDiaries,
+
+    // AI Analysis
+    aiAnalyses,
+    setAiAnalyses,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

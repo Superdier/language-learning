@@ -1,52 +1,55 @@
-import { AI_PROMPTS } from "../utils/constants";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(
+  import.meta.env.VITE_GOOGLE_AI_API_KEY || ""
+);
 
 /**
- * Mock AI Service - Sử dụng responses mẫu
- * Trong production, thay bằng OpenAI API thực
+ * Check if API key is configured
  */
+const isConfigured = () => {
+  return !!import.meta.env.VITE_GOOGLE_AI_API_KEY;
+};
 
-const mockResponses = {
-  checkSentence: {
-    correct: {
-      isCorrect: true,
-      message: "✅ Câu của bạn đúng ngữ pháp!",
-      suggestions: [],
-    },
-    incorrect: {
-      isCorrect: false,
-      message: "❌ Câu có một số lỗi cần sửa:",
-      suggestions: [
-        'Ngữ pháp: Nên dùng "を" thay vì "に" cho tân ngữ trực tiếp',
-        'Từ vựng: "食べます" phù hợp hơn "食う" trong văn viết lịch sự',
-        "Cấu trúc: Thứ tự từ nên là: Chủ ngữ + は + Tân ngữ + を + Động từ",
-      ],
-      correctedSentence: "私は朝ごはんを食べます。",
-    },
-  },
-  explainError: {
-    explanation:
-      "📚 Giải thích chi tiết:\n\n" +
-      '1. Ngữ pháp "〜ている" diễn tả hành động đang tiếp diễn hoặc trạng thái.\n' +
-      '2. Trong câu này, bạn đã dùng "〜てある" là sai vì "〜てある" diễn tả trạng thái đã được chuẩn bị sẵn.\n' +
-      "3. Đáp án đúng: 窓が開いている (Cửa sổ đang mở)\n\n" +
-      '💡 Mẹo: "〜ている" = đang làm gì, "〜てある" = đã làm gì sẵn rồi',
-  },
-  generateExample: [
-    "私は毎日日本語を勉強しています。(Tôi học tiếng Nhật mỗi ngày)",
-    "彼女は図書館で本を読んでいます。(Cô ấy đang đọc sách ở thư viện)",
-    "友達と映画を見に行きたいです。(Tôi muốn đi xem phim với bạn)",
-  ],
-  suggestWriting: {
-    topic: "今日の出来事",
-    suggestions: [
-      "朝ごはんに何を食べましたか？",
-      "今日はどこに行きましたか？",
-      "友達に会いましたか？",
-      "今日の天気はどうでしたか？",
-      "何か面白いことがありましたか？",
-    ],
-    template: "今日は___に行って、___をしました。とても___でした。",
-  },
+/**
+ * Call Gemini API
+ */
+export const callGemini = async (prompt, useJson = false) => {
+  if (!isConfigured()) {
+    throw new Error("Gemini API key not configured");
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-pro",
+      generationConfig: useJson
+        ? {
+            temperature: 0.2,
+            topK: 1,
+            topP: 1,
+          }
+        : undefined,
+    });
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    if (useJson) {
+      // Try to extract JSON from response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      return JSON.parse(text);
+    }
+
+    return text;
+  } catch (error) {
+    console.error("Gemini API error:", error);
+    throw error;
+  }
 };
 
 /**
@@ -57,35 +60,81 @@ export const checkSentence = async (
   grammarPoints = [],
   vocabulary = []
 ) => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  // Mock logic: Check if sentence has common patterns
-  const hasCommonErrors =
-    sentence.includes("に食べる") ||
-    sentence.includes("が行く") ||
-    sentence.length < 5;
-
-  if (hasCommonErrors) {
-    return mockResponses.checkSentence.incorrect;
+  if (!isConfigured()) {
+    // Return mock response if API not configured
+    return {
+      isCorrect: Math.random() > 0.5,
+      message: "Demo mode - Gemini API chưa được cấu hình",
+      suggestions: [
+        "Đây là phản hồi demo",
+        "Vui lòng cấu hình VITE_GOOGLE_AI_API_KEY",
+      ],
+      correctedSentence: sentence,
+    };
   }
 
-  return mockResponses.checkSentence.correct;
+  const prompt = `あなたは日本語教師です。以下の文をチェックして、文法と語彙の誤りを指摘してください。
+
+文: ${sentence}
+${grammarPoints.length > 0 ? `使用する文法: ${grammarPoints.join(", ")}` : ""}
+${vocabulary.length > 0 ? `使用する語彙: ${vocabulary.join(", ")}` : ""}
+
+JSONフォーマットで返答してください:
+{
+  "isCorrect": true/false,
+  "message": "評価メッセージ",
+  "suggestions": ["改善点1", "改善点2"],
+  "correctedSentence": "正しい文"
+}`;
+
+  try {
+    const response = await callGemini(prompt, true);
+    return response;
+  } catch (error) {
+    console.error("Check sentence error:", error);
+    throw error;
+  }
 };
 
 /**
  * Explain error with detailed explanation
  */
 export const explainError = async (question, userAnswer, correctAnswer) => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  if (!isConfigured()) {
+    return {
+      question,
+      userAnswer,
+      correctAnswer,
+      explanation:
+        "Demo mode - Gemini API chưa được cấu hình. Vui lòng thêm VITE_GOOGLE_AI_API_KEY vào environment variables.",
+    };
+  }
 
-  return {
-    question,
-    userAnswer,
-    correctAnswer,
-    explanation: mockResponses.explainError.explanation,
-  };
+  const prompt = `あなたは日本語教師です。学習者の誤りを詳しく説明してください。
+
+問題: ${question}
+学習者の答え: ${userAnswer}
+正しい答え: ${correctAnswer}
+
+以下の形式で詳しく説明してください:
+1. なぜ学習者の答えが間違っているのか
+2. 正しい答えの文法的な説明
+3. 覚えやすいコツやヒント
+
+ベトナム語で説明してください。`;
+
+  try {
+    const explanation = await callGemini(prompt);
+    return {
+      question,
+      userAnswer,
+      correctAnswer,
+      explanation,
+    };
+  } catch (error) {
+    console.error("Explain error:", error);
+    throw error;
+  }
 };
 
 /**
@@ -96,147 +145,179 @@ export const generateExampleSentences = async (
   vocabularyList,
   difficulty = "normal"
 ) => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  if (!isConfigured()) {
+    return {
+      grammarPoint,
+      vocabulary: vocabularyList,
+      difficulty,
+      examples: [
+        { id: 1, sentence: "Demo sentence 1", translation: "Câu mẫu demo 1" },
+        { id: 2, sentence: "Demo sentence 2", translation: "Câu mẫu demo 2" },
+        { id: 3, sentence: "Demo sentence 3", translation: "Câu mẫu demo 3" },
+      ],
+    };
+  }
 
-  const examples = mockResponses.generateExample;
-
-  return {
-    grammarPoint,
-    vocabulary: vocabularyList,
-    difficulty,
-    examples: examples.map((ex, idx) => ({
-      id: idx + 1,
-      sentence: ex.split("(")[0].trim(),
-      translation: ex.split("(")[1]?.replace(")", "") || "",
-    })),
+  const difficultyMap = {
+    easy: "簡単",
+    normal: "普通",
+    hard: "難しい",
   };
+
+  const prompt = `あなたは日本語教師です。以下の文法と語彙を使って例文を3つ作成してください。
+
+文法: ${grammarPoint}
+語彙: ${vocabularyList.join(", ")}
+難易度: ${difficultyMap[difficulty]}
+
+JSONフォーマットで返答してください:
+{
+  "examples": [
+    {
+      "id": 1,
+      "sentence": "日本語の例文",
+      "translation": "ベトナム語の訳"
+    },
+    ...
+  ]
+}`;
+
+  try {
+    const response = await callGemini(prompt, true);
+    return {
+      grammarPoint,
+      vocabulary: vocabularyList,
+      difficulty,
+      examples: response.examples,
+    };
+  } catch (error) {
+    console.error("Generate examples error:", error);
+    throw error;
+  }
 };
 
 /**
  * Suggest writing topics and guidance
  */
 export const suggestWritingTopic = async () => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  if (!isConfigured()) {
+    return {
+      topic: "今日の出来事 (Demo)",
+      suggestions: [
+        "朝ごはんに何を食べましたか？",
+        "今日はどこに行きましたか？",
+        "友達に会いましたか？",
+      ],
+      template: "今日は___に行って、___をしました。とても___でした。",
+    };
+  }
 
-  return mockResponses.suggestWriting;
+  const prompt = `あなたは日本語教師です。日本語学習者のために日記のトピックと書き方のガイドを提案してください。
+
+以下のJSONフォーマットで返答してください:
+{
+  "topic": "トピック名",
+  "suggestions": [
+    "質問1",
+    "質問2",
+    "質問3",
+    "質問4",
+    "質問5"
+  ],
+  "template": "文のテンプレート"
+}
+
+トピックは日常生活に関するものにしてください。質問はベトナム語で書いてください。`;
+
+  try {
+    const response = await callGemini(prompt, true);
+    return response;
+  } catch (error) {
+    console.error("Suggest topic error:", error);
+    throw error;
+  }
 };
 
 /**
  * Check diary entry
  */
 export const checkDiaryEntry = async (content) => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-
-  const errorCount = Math.floor(Math.random() * 3);
-
-  return {
-    errorCount,
-    errors:
-      errorCount > 0
-        ? [
-            {
-              line: 1,
-              type: "grammar",
-              message: 'Nên dùng "〜ています" thay vì "〜ている"',
-            },
-            {
-              line: 2,
-              type: "vocabulary",
-              message: 'Từ "美味しい" phù hợp hơn "うまい" trong nhật ký',
-            },
-          ].slice(0, errorCount)
-        : [],
-    suggestions: [
-      "Cấu trúc câu tốt, tiếp tục phát huy!",
-      "Thử thêm một số liên từ để câu mượt mà hơn",
-      "Vocabulary phong phú, rất tốt!",
-    ],
-    overallScore: 85 + Math.floor(Math.random() * 15),
-  };
-};
-
-/**
- * Call actual OpenAI API (for production)
- * Uncomment and configure when ready to use
- */
-
-export const callOpenAI = async (prompt, model = "gpt-3.5-turbo") => {
-  const API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
-
-  if (!API_KEY) {
-    throw new Error("OpenAI API key not configured");
+  if (!isConfigured()) {
+    return {
+      errorCount: 0,
+      errors: [],
+      suggestions: ["Demo mode - Gemini API chưa được cấu hình"],
+      overallScore: 85,
+    };
   }
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: "system",
-            content:
-              "あなたは日本語教師です。学習者の文章をチェックして、改善点を提案してください。",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      }),
-    });
+  const prompt = `あなたは日本語教師です。学習者の日記をチェックして、誤りを指摘し、改善点を提案してください。
 
-    const data = await response.json();
-    return data.choices[0].message.content;
+日記:
+${content}
+
+以下のJSONフォーマットで返答してください:
+{
+  "errorCount": 誤りの数,
+  "errors": [
+    {
+      "line": 行番号,
+      "type": "grammar" または "vocabulary",
+      "message": "ベトナム語での説明"
+    }
+  ],
+  "suggestions": [
+    "改善点1 (ベトナム語)",
+    "改善点2 (ベトナム語)"
+  ],
+  "overallScore": 0-100の点数
+}`;
+
+  try {
+    const response = await callGemini(prompt, true);
+    return response;
   } catch (error) {
-    console.error("OpenAI API error:", error);
+    console.error("Check diary error:", error);
     throw error;
   }
 };
 
 /**
- * Call actual Google Gemini API (for production)
- * Uncomment and configure when ready to use
+ * Daily error analysis (batch process)
  */
-
-export const callGoogleGemini = async (prompt) => {
-  const API_KEY = process.env.VITE_REACT_APP_GEMINI_API_KEY;
-  if (!API_KEY) {
-    throw new Error("Google Gemini API key not configured");
+export const analyzeDailyErrors = async (errors) => {
+  if (!isConfigured() || errors.length === 0) {
+    return [];
   }
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
-        }),
-      }
-    );
+  const prompt = `あなたは日本語教師です。学習者の今日の誤りを分析して、それぞれの誤りに対して詳しい説明を提供してください。
 
-    const data = await response.json();
-    // Trả về nội dung sinh ra
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+誤りリスト:
+${errors
+  .map(
+    (e, i) =>
+      `${i + 1}. 問題: ${e.question}\n   学習者の答え: ${
+        e.userAnswer
+      }\n   正しい答え: ${e.correctAnswer}`
+  )
+  .join("\n\n")}
+
+JSONフォーマットで返答してください:
+{
+  "analyses": [
+    {
+      "errorId": エラーのID,
+      "explanation": "詳しい説明 (ベトナム語)",
+      "tip": "覚えやすいコツ (ベトナム語)"
+    }
+  ]
+}`;
+
+  try {
+    const response = await callGemini(prompt, true);
+    return response.analyses || [];
   } catch (error) {
-    console.error("Google Gemini API error:", error);
+    console.error("Analyze daily errors:", error);
     throw error;
   }
 };

@@ -83,3 +83,18 @@ export const DAILY_REVIEW_TIME = {
   HOUR: 21,
   MINUTE: 30,
 };
+
+// Reading Difficulty Levels
+export const READING_LEVELS = {
+  BEGINNER: "beginner",
+  INTERMEDIATE: "intermediate",
+  ADVANCED: "advanced",
+};
+
+// Reading Types
+export const READING_TYPES = {
+  SHORT_PASSAGE: "short_passage",
+  ARTICLE: "article",
+  DIALOGUE: "dialogue",
+  STORY: "story",
+};
