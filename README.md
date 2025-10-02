@@ -1,16 +1,85 @@
-# React + Vite
+# 🇯🇵 Japanese Learning App - Full Stack Edition
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Complete Japanese learning platform with AI, cloud sync, and comprehensive features.
 
-Currently, two official plugins are available:
+## ✨ All Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 🎓 Core Learning
 
-## React Compiler
+- ✅ Dashboard with progress charts (7/30 days)
+- ✅ Grammar lessons with quizzes and comparisons
+- ✅ Vocabulary with flashcards and Kanji
+- ✅ SRS (Spaced Repetition System)
+- ✅ Error analysis and tracking
+- ✅ Sentence building practice
+- ✅ Daily diary writing
 
-The React Compiler is not enabled on this template. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 🔐 Authentication & Cloud
 
-## Expanding the ESLint configuration
+- ✅ Firebase Authentication (Email + Google)
+- ✅ Cloud Sync (Firestore)
+- ✅ Auto-sync every 5 seconds
+- ✅ Offline persistence
+- ✅ Multi-device support
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 🤖 AI Integration (Google Gemini)
+
+- ✅ Check sentence grammar
+- ✅ Explain errors in Vietnamese
+- ✅ Generate example sentences
+- ✅ Suggest writing topics
+- ✅ Daily error analysis (21:30)
+- ✅ Generate reading passages
+- ✅ Generate listening exercises
+
+### 📊 Data Management
+
+- ✅ Upload Excel/CSV files
+- ✅ Google Sheets integration
+- ✅ Real-time data sync
+- ✅ Export/Import data
+
+### 📖 Skills Practice
+
+- ✅ Reading comprehension with questions
+- ✅ Listening comprehension with Web Speech API
+- ✅ Writing practice with AI feedback
+- ✅ Speaking practice (coming soon)
+
+### 🎨 UI/UX
+
+- ✅ Dark mode
+- ✅ PWA support (installable)
+- ✅ Responsive design
+- ✅ Mazii dictionary integration
+- ✅ Loading states & error handling
+
+## 🛠️ Tech Stack
+
+**Frontend:**
+
+- React 18 + Vite
+- Bootstrap 5 + React Bootstrap
+- Chart.js
+- React Router v6
+
+**Backend & Services:**
+
+- Firebase (Auth + Firestore)
+- Google AI (Gemini API)
+- Google Sheets API
+- Web Speech API
+
+**DevOps:**
+
+- Vercel (Hosting)
+- GitHub (Version Control)
+- Environment Variables
+
+## 📈 Usage Stats
+
+- **40+** Components
+- **13** Pages
+- **10+** Services
+- **5** Context Providers
+- **20+** Custom Hooks
