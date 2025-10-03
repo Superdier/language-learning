@@ -1,17 +1,31 @@
-import React from 'react';
-import { Card, Badge, Button, ProgressBar } from 'react-bootstrap';
-import { FaBook, FaLanguage, FaFont, FaArrowsAltH, FaPlay } from 'react-icons/fa';
+import React from "react";
+import { Card, Badge, Button, ProgressBar } from "react-bootstrap";
+import {
+  FaBook,
+  FaLanguage,
+  FaFont,
+  FaArrowsAltH,
+  FaPlay,
+} from "react-icons/fa";
 
-const ReviewCard = ({ title, description, count, color, icon, onStart, disabled = false }) => {
+const ReviewCard = ({
+  title,
+  description,
+  count,
+  color,
+  icon,
+  onStart,
+  disabled = false,
+}) => {
   const getIcon = () => {
     switch (icon) {
-      case 'grammar':
+      case "grammar":
         return <FaBook size={32} />;
-      case 'vocabulary':
+      case "vocabulary":
         return <FaLanguage size={32} />;
-      case 'kanji':
+      case "kanji":
         return <FaFont size={32} />;
-      case 'contrast':
+      case "contrast":
         return <FaArrowsAltH size={32} />;
       default:
         return <FaBook size={32} />;
@@ -22,13 +36,11 @@ const ReviewCard = ({ title, description, count, color, icon, onStart, disabled 
     <Card className="card-custom h-100">
       <Card.Body>
         <div className="text-center">
-          <div className={`text-${color} mb-3`}>
-            {getIcon()}
-          </div>
-          
+          <div className={`text-${color} mb-3`}>{getIcon()}</div>
+
           <h5 className="mb-2">{title}</h5>
           <p className="text-muted small mb-3">{description}</p>
-          
+
           <div className="mb-3">
             <h2 className={`text-${color} mb-0`}>{count}</h2>
             <small className="text-muted">mục cần ôn</small>
@@ -41,7 +53,7 @@ const ReviewCard = ({ title, description, count, color, icon, onStart, disabled 
             disabled={disabled || count === 0}
           >
             <FaPlay className="me-2" />
-            {count === 0 ? 'Không có mục nào' : 'Bắt đầu ôn tập'}
+            {count === 0 ? "Không có mục nào" : "Bắt đầu ôn tập"}
           </Button>
         </div>
       </Card.Body>

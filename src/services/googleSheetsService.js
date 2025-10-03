@@ -1,3 +1,5 @@
+import { processErrorLogData } from "./errorLogProcessor";
+
 /**
  * Google Sheets Service
  * Fetch data from public Google Sheets
@@ -145,6 +147,23 @@ export const testConnection = async (url) => {
       sheets: metadata.sheets?.map((s) => s.properties.title) || [],
     };
   } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Fetch and process Error Log from Google Sheets
+ */
+export const fetchErrorLog = async (
+  spreadsheetId,
+  sheetName = "Error Log Template"
+) => {
+  try {
+    const data = await fetchSheetData(spreadsheetId, sheetName);
+    const errorLogs = processErrorLogData(data);
+    return errorLogs;
+  } catch (error) {
+    console.error("Fetch error log error:", error);
     throw error;
   }
 };
