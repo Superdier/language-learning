@@ -7,6 +7,7 @@ import {
   FaCheckCircle,
   FaPencilAlt,
   FaUpload,
+  FaHeadphones,
 } from "react-icons/fa";
 
 const QuickActions = () => {

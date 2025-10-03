@@ -6,6 +6,8 @@ import {
   InputGroup,
   Badge,
   ListGroup,
+  Row,
+  Col,
 } from "react-bootstrap";
 import {
   FaLink,

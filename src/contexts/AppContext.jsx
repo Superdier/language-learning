@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useRef,
+  useMemo,
 } from "react";
 import { STORAGE_KEYS } from "../utils/constants";
 import { useAuth } from "./AuthContext";

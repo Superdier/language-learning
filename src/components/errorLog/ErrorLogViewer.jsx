@@ -7,6 +7,8 @@ import {
   InputGroup,
   Button,
   Dropdown,
+  Row,
+  Col,
 } from "react-bootstrap";
 import { FaFilter, FaSearch, FaExternalLinkAlt } from "react-icons/fa";
 import { useApp } from "../../contexts/AppContext";

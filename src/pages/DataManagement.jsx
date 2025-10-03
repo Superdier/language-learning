@@ -1,6 +1,11 @@
 import React from "react";
-import { Container, Row, Col, Tabs, Tab, Button } from "react-bootstrap";
-import { FaUpload, FaDatabase, FaTrash } from "react-icons/fa";
+import { Container, Row, Col, Tabs, Tab, Button, Badge } from "react-bootstrap";
+import {
+  FaUpload,
+  FaDatabase,
+  FaTrash,
+  FaExclamationTriangle,
+} from "react-icons/fa";
 import Card from "../components/ui/Card";
 import FileUpload from "../components/common/FileUpload";
 import ExcelLinkInput from "../components/common/ExcelLinkInput";
@@ -10,7 +15,7 @@ import ErrorLogStats from "../components/errorLog/ErrorLogStats";
 
 const DataManagement = () => {
   const { clearAllData } = useApp();
-
+  const { importedErrorLogs } = useApp();
   const handleClearData = () => {
     if (
       window.confirm(
