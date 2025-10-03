@@ -27,12 +27,19 @@ import {
   processKanjiData,
   processContrastCardData,
 } from "../../services/fileUpload";
+import { fetchErrorLog } from "../../services/googleSheetsService";
+import {
+  convertErrorLogToReviewItems,
+  getErrorLogStatistics,
+} from "../../services/errorLogProcessor";
 
 const ExcelLinkInput = () => {
   const [sheetsLink, setSheetsLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [error, setError] = useState(null);
+  const [importErrorLog, setImportErrorLog] = useState(true);
+  const [errorLogStats, setErrorLogStats] = useState(null);
 
   const {
     setGrammarItems,
@@ -44,6 +51,10 @@ const ExcelLinkInput = () => {
     kanjiItems,
     contrastCards,
     showNotification,
+    errorLog,
+    setErrorLog,
+    importedErrorLogs,
+    setImportedErrorLogs,
   } = useApp();
 
   const handleTestConnection = async () => {
@@ -90,6 +101,7 @@ const ExcelLinkInput = () => {
         vocabulary: 0,
         kanji: 0,
         contrast: 0,
+        errorLog: 0,
       };
 
       // Process Grammar
@@ -124,6 +136,52 @@ const ExcelLinkInput = () => {
         importedCount.contrast = contrastData.length;
       }
 
+      // Process Error Log
+      if (
+        importErrorLog &&
+        (sheetsData["error log template"] || sheetsData["error log"])
+      ) {
+        const errorLogData = await fetchErrorLog(
+          spreadsheetId,
+          "Error Log Template"
+        );
+
+        if (errorLogData.length > 0) {
+          // Add to imported error logs (separate from app-generated errors)
+          setImportedErrorLogs([...importedErrorLogs, ...errorLogData]);
+          importedCount.errorLog = errorLogData.length;
+
+          // Add to error log
+          setErrorLog([...errorLog, ...errorLogData]);
+          importedCount.errorLog = errorLogData.length;
+
+          // Get statistics
+          const stats = getErrorLogStatistics(errorLogData);
+          setErrorLogStats(stats);
+
+          // Convert errors to review items if needed
+          const newItems = convertErrorLogToReviewItems(
+            errorLogData.filter((e) => e.needsSRS),
+            grammarItems,
+            vocabularyItems,
+            kanjiItems
+          );
+
+          if (newItems.grammar.length > 0) {
+            setGrammarItems([...grammarItems, ...newItems.grammar]);
+            importedCount.grammar += newItems.grammar.length;
+          }
+          if (newItems.vocabulary.length > 0) {
+            setVocabularyItems([...vocabularyItems, ...newItems.vocabulary]);
+            importedCount.vocabulary += newItems.vocabulary.length;
+          }
+          if (newItems.kanji.length > 0) {
+            setKanjiItems([...kanjiItems, ...newItems.kanji]);
+            importedCount.kanji += newItems.kanji.length;
+          }
+        }
+      }
+
       const total = Object.values(importedCount).reduce(
         (sum, val) => sum + val,
         0
@@ -135,7 +193,8 @@ const ExcelLinkInput = () => {
         showNotification(
           `Đã import ${total} mục thành công! ` +
             `(Grammar: ${importedCount.grammar}, Vocab: ${importedCount.vocabulary}, ` +
-            `Kanji: ${importedCount.kanji}, Contrast: ${importedCount.contrast})`,
+            `Kanji: ${importedCount.kanji}, Contrast: ${importedCount.contrast}, ` +
+            `Error Log: ${importedCount.errorLog})`,
           "success"
         );
         setSheetsLink("");
@@ -151,7 +210,6 @@ const ExcelLinkInput = () => {
   return (
     <div>
       <h6 className="mb-3">🔗 Kết nối với Google Sheets</h6>
-
       <Alert variant="info" className="mb-3">
         <small>
           <strong>Hướng dẫn:</strong>
@@ -168,7 +226,6 @@ const ExcelLinkInput = () => {
           <Badge bg="warning">contrast_card</Badge>
         </small>
       </Alert>
-
       <InputGroup className="mb-3">
         <InputGroup.Text>
           <FaLink />
@@ -185,7 +242,6 @@ const ExcelLinkInput = () => {
           disabled={loading}
         />
       </InputGroup>
-
       <div className="d-grid gap-2 mb-3">
         <Button
           variant="outline-primary"
@@ -206,14 +262,12 @@ const ExcelLinkInput = () => {
           </Button>
         )}
       </div>
-
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>
           <FaExclamationTriangle className="me-2" />
           {error}
         </Alert>
       )}
-
       {testResult && (
         <Alert variant="success">
           <div className="d-flex align-items-center mb-2">
@@ -240,7 +294,61 @@ const ExcelLinkInput = () => {
           </ListGroup>
         </Alert>
       )}
-
+      {/* Error Log Option */}
+      <Form.Check
+        type="checkbox"
+        id="import-error-log"
+        label="Import Error Log (nếu có sheet 'Error Log Template')"
+        checked={importErrorLog}
+        onChange={(e) => setImportErrorLog(e.target.checked)}
+        className="mb-3"
+      />
+      {/* Error Log Stats */}
+      {errorLogStats && (
+        <Alert variant="warning" className="mt-3">
+          <h6>📋 Thống kê Error Log:</h6>
+          <Row>
+            <Col md={6}>
+              <small>
+                <strong>Tổng số lỗi:</strong> {errorLogStats.total}
+                <br />
+                <strong>Cần SRS:</strong> {errorLogStats.needsSRS}
+                <br />
+                <strong>Lỗi gần đây (30 ngày):</strong>{" "}
+                {errorLogStats.recentErrors}
+              </small>
+            </Col>
+            <Col md={6}>
+              <small>
+                <strong>Theo loại:</strong>
+                <br />
+                {Object.entries(errorLogStats.byPart).map(([part, count]) => (
+                  <span key={part}>
+                    • {part}: {count}
+                    <br />
+                  </span>
+                ))}
+              </small>
+            </Col>
+          </Row>
+        </Alert>
+      )}
+      <Alert variant="info">
+        <small>
+          <strong>💡 Lưu ý về Error Log:</strong>
+          <ul className="mb-0 mt-2">
+            <li>Sheet phải có tên "Error Log Template"</li>
+            <li>
+              Cột "Part" quyết định loại lỗi (Grammar, Vocabulary, Kanji,
+              Reading, Listening)
+            </li>
+            <li>Cột "SRS?" = Yes sẽ tự động tạo flashcard để ôn</li>
+            <li>Status = "Done" hoặc "Archived" sẽ không được import</li>
+            <li>Lỗi sẽ được gắn với ngữ pháp/từ vựng tương ứng nếu tìm thấy</li>
+          </ul>
+        </small>
+      </Alert>
+      setImportedErrorLogs setImportedErrorLogs
       <Alert variant="warning">
         <small>
           <strong>⚠️ Lưu ý quan trọng:</strong>

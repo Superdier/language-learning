@@ -1,16 +1,22 @@
-import React from 'react';
-import { Container, Row, Col, Tabs, Tab, Button } from 'react-bootstrap';
-import { FaUpload, FaDatabase, FaTrash } from 'react-icons/fa';
-import Card from '../components/ui/Card';
-import FileUpload from '../components/common/FileUpload';
-import ExcelLinkInput from '../components/common/ExcelLinkInput';
-import { useApp } from '../contexts/AppContext';
+import React from "react";
+import { Container, Row, Col, Tabs, Tab, Button } from "react-bootstrap";
+import { FaUpload, FaDatabase, FaTrash } from "react-icons/fa";
+import Card from "../components/ui/Card";
+import FileUpload from "../components/common/FileUpload";
+import ExcelLinkInput from "../components/common/ExcelLinkInput";
+import { useApp } from "../contexts/AppContext";
+import ErrorLogViewer from "../components/errorLog/ErrorLogViewer";
+import ErrorLogStats from "../components/errorLog/ErrorLogStats";
 
 const DataManagement = () => {
   const { clearAllData } = useApp();
 
   const handleClearData = () => {
-    if (window.confirm('⚠️ Bạn có chắc chắn muốn xóa TẤT CẢ dữ liệu? Hành động này không thể hoàn tác!')) {
+    if (
+      window.confirm(
+        "⚠️ Bạn có chắc chắn muốn xóa TẤT CẢ dữ liệu? Hành động này không thể hoàn tác!"
+      )
+    ) {
       clearAllData();
     }
   };
@@ -26,12 +32,43 @@ const DataManagement = () => {
         <Col md={12} lg={8}>
           <Card>
             <Tabs defaultActiveKey="upload" className="mb-3">
-              <Tab eventKey="upload" title={<><FaUpload className="me-2" />Upload File</>}>
+              <Tab
+                eventKey="upload"
+                title={
+                  <>
+                    <FaUpload className="me-2" />
+                    Upload File
+                  </>
+                }
+              >
                 <FileUpload />
               </Tab>
-              
-              <Tab eventKey="link" title={<><FaDatabase className="me-2" />Google Sheets</>}>
+
+              <Tab
+                eventKey="link"
+                title={
+                  <>
+                    <FaDatabase className="me-2" />
+                    Google Sheets
+                  </>
+                }
+              >
                 <ExcelLinkInput />
+              </Tab>
+              <Tab
+                eventKey="errorlog"
+                title={
+                  <>
+                    <FaExclamationTriangle className="me-2" />
+                    Error Log
+                    <Badge bg="danger" className="ms-2">
+                      {importedErrorLogs.length}
+                    </Badge>
+                  </>
+                }
+              >
+                <ErrorLogStats />
+                <ErrorLogViewer />
               </Tab>
             </Tabs>
           </Card>
@@ -40,10 +77,7 @@ const DataManagement = () => {
         <Col md={12} lg={4}>
           <Card title="⚙️ Cài đặt" variant="light">
             <div className="d-grid gap-2">
-              <Button 
-                variant="outline-danger"
-                onClick={handleClearData}
-              >
+              <Button variant="outline-danger" onClick={handleClearData}>
                 <FaTrash className="me-2" />
                 Xóa tất cả dữ liệu
               </Button>
@@ -64,12 +98,15 @@ const DataManagement = () => {
               <p className="text-muted small mb-2">
                 Tải về file mẫu để dễ dàng chuẩn bị dữ liệu:
               </p>
-              <Button 
-                variant="outline-primary" 
-                size="sm" 
+              <Button
+                variant="outline-primary"
+                size="sm"
                 className="w-100"
                 onClick={() => {
-                  window.open('https://docs.google.com/spreadsheets/d/1example/template', '_blank');
+                  window.open(
+                    "https://docs.google.com/spreadsheets/d/1example/template",
+                    "_blank"
+                  );
                 }}
                 disabled
               >
@@ -80,9 +117,14 @@ const DataManagement = () => {
 
           <Card title="💡 Hướng dẫn" variant="info" className="mt-3">
             <small>
-              <p><strong>Cấu trúc file Excel:</strong></p>
+              <p>
+                <strong>Cấu trúc file Excel:</strong>
+              </p>
               <ol className="mb-0 ps-3">
-                <li>Tạo các sheet riêng biệt cho Grammar, Vocabulary, Kanji, Contrast_Card</li>
+                <li>
+                  Tạo các sheet riêng biệt cho Grammar, Vocabulary, Kanji,
+                  Contrast_Card
+                </li>
                 <li>Dòng đầu tiên là tên cột (headers)</li>
                 <li>Các dòng tiếp theo là dữ liệu</li>
                 <li>Không để trống cột quan trọng (Structure, Word, Kanji)</li>

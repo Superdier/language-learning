@@ -50,6 +50,9 @@ export const AppProvider = ({ children }) => {
   // AI Analysis state
   const [aiAnalyses, setAiAnalyses] = useState([]);
 
+  // Imported error logs from last import session
+  const [importedErrorLogs, setImportedErrorLogs] = useState([]);
+
   // Auto sync to cloud when data changes (debounced)
   useEffect(() => {
     if (!user?.uid) return;
@@ -266,6 +269,27 @@ export const AppProvider = ({ children }) => {
     );
   }, [aiAnalyses]);
 
+  // Load imported error logs from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("japanese_app_imported_error_logs");
+    if (saved) {
+      setImportedErrorLogs(JSON.parse(saved));
+    }
+  }, []);
+
+  // Save imported error logs to localStorage
+  useEffect(() => {
+    localStorage.setItem(
+      "japanese_app_imported_error_logs",
+      JSON.stringify(importedErrorLogs)
+    );
+  }, [importedErrorLogs]);
+
+  // Merge imported error logs with app error log
+  const allErrorLogs = useMemo(() => {
+    return [...errorLog, ...importedErrorLogs];
+  }, [errorLog, importedErrorLogs]);
+
   const value = {
     // State
     user,
@@ -300,6 +324,11 @@ export const AppProvider = ({ children }) => {
     // AI Analysis
     aiAnalyses,
     setAiAnalyses,
+
+    // Imported Error Logs
+    importedErrorLogs,
+    setImportedErrorLogs,
+    allErrorLogs,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

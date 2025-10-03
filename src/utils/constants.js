@@ -98,3 +98,29 @@ export const READING_TYPES = {
   DIALOGUE: "dialogue",
   STORY: "story",
 };
+
+// Error Log Sources
+export const ERROR_SOURCES = {
+  BOOK: "Sách",
+  JLPT: "JLPT",
+  APP: "App",
+  OTHER: "Khác",
+};
+
+// Error Log Status
+export const ERROR_STATUS = {
+  NEW: "New",
+  IN_PROGRESS: "In Progress",
+  REVIEWING: "Reviewing",
+  DONE: "Done",
+  ARCHIVED: "Archived",
+};
+
+// Part Types (from Error Log)
+export const PART_TYPES = {
+  GRAMMAR: "Grammar",
+  VOCABULARY: "Vocabulary",
+  KANJI: "Kanji",
+  READING: "Reading",
+  LISTENING: "Listening",
+};
